@@ -24,7 +24,9 @@ async function main() {
     octokit: github.getOctokit(core.getInput('token')).rest as any,
   });
 
-  await Promise.all([createPr(ctx), createRelease(ctx)]);
+  await createRelease(ctx);
+
+  await createPr(ctx);
 }
 
 main().catch((error) => {

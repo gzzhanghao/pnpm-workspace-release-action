@@ -6,7 +6,6 @@ import changelogWriter from 'conventional-changelog-writer';
 import commitsParser from 'conventional-commits-parser';
 import * as semver from 'semver';
 
-import { getCommits } from './get-commits';
 import { GITHUB_ORIGIN, RELEASE_TITLE_REGEX } from './shared/constants';
 import { Context } from './shared/context';
 import { createLogger } from './shared/logger';
@@ -40,13 +39,17 @@ export async function getReleaseInfo(
 
   logger.info(`Getting commits from '${ctx.cwd}'`);
 
-  const commits = await getCommits({}, { cwd: ctx.cwd });
+  const commitsRes = await ctx.octokit.repos.listCommits({
+    ...ctx.repo,
+    sha: ctx.options.branch,
+  });
+
+  const commits = commitsRes.data;
 
   const lastReleaseIndex = commits.findIndex((commit) => {
-    if (commit.tags.some((tag) => semver.valid(tag))) {
-      return true;
-    }
-    const match = commit.body.split('\n')[0].match(RELEASE_TITLE_REGEX);
+    const match = commit.commit.message
+      .split('\n')[0]
+      .match(RELEASE_TITLE_REGEX);
     return semver.valid(match?.groups?.version);
   });
 
@@ -57,8 +60,10 @@ export async function getReleaseInfo(
     logger.info(`Missing latest release commit`);
   } else {
     const commit = commits[lastReleaseIndex];
-    const subject = commit.body.split('\n')[0];
-    logger.info(`Latest release commit is [${commit.hash}] '${subject}'`);
+    const subject = commit.commit.message.split('\n')[0];
+    logger.info(
+      `Latest release commit is [${commit.sha.slice(0, 7)}] '${subject}'`,
+    );
   }
   logger.succ(
     `Got ${commits.length} commits, ${newCommits.length} new commits`,
@@ -73,8 +78,8 @@ export async function getReleaseInfo(
   const conventionalCommits = newCommits
     .slice(0, lastReleaseIndex)
     .map((commit) => ({
-      ...commitsParser.sync(commit.body, parserOpts),
-      hash: commit.hash,
+      ...commitsParser.sync(commit.commit.message, parserOpts),
+      hash: commit.sha,
     }));
 
   const pkgJson = JSON.parse(

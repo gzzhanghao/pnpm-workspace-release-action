@@ -35,5 +35,7 @@ async function release(options: CliOptions) {
     }),
   });
 
-  await Promise.all([createPr(ctx), createRelease(ctx)]);
+  await createRelease(ctx);
+
+  await createPr(ctx);
 }
