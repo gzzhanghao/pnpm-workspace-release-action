@@ -7,7 +7,7 @@ import commitsParser from 'conventional-commits-parser';
 import * as semver from 'semver';
 
 import { getCommits } from './get-commits';
-import { GITHUB_ORIGIN } from './shared/constants';
+import { GITHUB_ORIGIN, RELEASE_TITLE_REGEX } from './shared/constants';
 import { Context } from './shared/context';
 
 export interface ReleaseInfo {
@@ -37,9 +37,13 @@ export async function getReleaseInfo(
 
   const commits = await getCommits({}, { cwd: ctx.cwd });
 
-  const lastReleaseIndex = commits.findIndex((commit) =>
-    commit.tags.some((tag) => semver.valid(tag)),
-  );
+  const lastReleaseIndex = commits.findIndex((commit) => {
+    if (commit.tags.some((tag) => semver.valid(tag))) {
+      return true;
+    }
+    const match = commit.body.split('\n')[0].match(RELEASE_TITLE_REGEX);
+    return semver.valid(match?.groups?.version);
+  });
 
   const newCommits =
     lastReleaseIndex >= 0 ? commits.slice(0, lastReleaseIndex) : commits;
@@ -74,6 +78,10 @@ export async function getReleaseInfo(
   )
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+
+  if (changelog.trim().split('\n').length === 1) {
+    return;
+  }
 
   return {
     version,

@@ -1,12 +1,10 @@
 import { RestEndpointMethodTypes } from '@octokit/rest';
 
-import { PENDING_LABEL } from './shared/constants';
+import { PENDING_LABEL, RELEASE_TITLE_REGEX } from './shared/constants';
 import { Context } from './shared/context';
 import { createLogger } from './shared/logger';
 
 const logger = createLogger('release');
-
-const PULL_REQUEST_TITLE_REGEX = /^chore: release v(?<version>.+)$/;
 
 type PullRequest =
   RestEndpointMethodTypes['pulls']['list']['response']['data'][number];
@@ -36,7 +34,7 @@ export async function createRelease(ctx: Context) {
         pull.title = 'chore: release v0.1.0';
         const pullUrl = `${ctx.urls.pull}/${pull.number}`;
 
-        const match = pull.title.match(PULL_REQUEST_TITLE_REGEX);
+        const match = pull.title.match(RELEASE_TITLE_REGEX);
         const version = match?.groups?.version;
         if (!version) {
           logger.warn(

@@ -35564,6 +35564,7 @@ function getCommits(options, execOptions) {
 ;// CONCATENATED MODULE: ./src/shared/constants.ts
 const GITHUB_ORIGIN = 'https://github.com';
 const PENDING_LABEL = 'autorelease: pending';
+const RELEASE_TITLE_REGEX = /^chore: release v(?<version>.+)$/;
 
 ;// CONCATENATED MODULE: ./src/get-release-info.ts
 
@@ -35579,7 +35580,13 @@ const parseArray = (conventional_changelog_writer_default()).parseArray;
 async function getReleaseInfo(ctx) {
     const { parserOpts, writerOpts, recommendedBumpOpts } = await (conventional_changelog_angular_default());
     const commits = await getCommits({}, { cwd: ctx.cwd });
-    const lastReleaseIndex = commits.findIndex((commit) => commit.tags.some((tag) => semver.valid(tag)));
+    const lastReleaseIndex = commits.findIndex((commit) => {
+        if (commit.tags.some((tag) => semver.valid(tag))) {
+            return true;
+        }
+        const match = commit.body.split('\n')[0].match(RELEASE_TITLE_REGEX);
+        return semver.valid(match?.groups?.version);
+    });
     const newCommits = lastReleaseIndex >= 0 ? commits.slice(0, lastReleaseIndex) : commits;
     if (!newCommits.length) {
         return;
@@ -35602,6 +35609,9 @@ async function getReleaseInfo(ctx) {
     }, writerOpts)
         .replace(/\n{3,}/g, '\n\n')
         .trim();
+    if (changelog.trim().split('\n').length === 1) {
+        return;
+    }
     return {
         version,
         changelog,
@@ -35774,7 +35784,6 @@ async function createPr(ctx) {
 
 
 const create_release_logger = createLogger('release');
-const PULL_REQUEST_TITLE_REGEX = /^chore: release v(?<version>.+)$/;
 async function createRelease(ctx) {
     try {
         create_release_logger.info(`Fetching closed PRs with base ${ctx.options.branch}`);
@@ -35789,7 +35798,7 @@ async function createRelease(ctx) {
         await Promise.all(pendingPulls.map(async (pull) => {
             pull.title = 'chore: release v0.1.0';
             const pullUrl = `${ctx.urls.pull}/${pull.number}`;
-            const match = pull.title.match(PULL_REQUEST_TITLE_REGEX);
+            const match = pull.title.match(RELEASE_TITLE_REGEX);
             const version = match?.groups?.version;
             if (!version) {
                 create_release_logger.warn(`Failed to parse PR title '${pull.title}' for '${pullUrl}'`);
