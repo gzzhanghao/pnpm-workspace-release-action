@@ -37,7 +37,7 @@ export async function getReleaseInfo(
   const { parserOpts, writerOpts, recommendedBumpOpts } =
     await changelogAngular;
 
-  logger.info(`Getting commits from '${ctx.cwd}'`);
+  logger.info(`Fetching commits for '${ctx.options.branch}'`);
 
   const commitsRes = await ctx.octokit.repos.listCommits({
     ...ctx.repo,
@@ -53,18 +53,18 @@ export async function getReleaseInfo(
     return semver.valid(match?.groups?.version);
   });
 
+  if (lastReleaseIndex) {
+    logger.info('Latest release commit not found');
+  } else {
+    const commit = commits[lastReleaseIndex];
+    const sha = commit.sha.slice(0, 7);
+    const subject = commit.commit.message.split('\n')[0];
+    logger.info(`Latest release commit is [${sha}] '${subject}'`);
+  }
+
   const newCommits =
     lastReleaseIndex >= 0 ? commits.slice(0, lastReleaseIndex) : commits;
 
-  if (lastReleaseIndex) {
-    logger.info(`Missing latest release commit`);
-  } else {
-    const commit = commits[lastReleaseIndex];
-    const subject = commit.commit.message.split('\n')[0];
-    logger.info(
-      `Latest release commit is [${commit.sha.slice(0, 7)}] '${subject}'`,
-    );
-  }
   logger.succ(
     `Got ${commits.length} commits, ${newCommits.length} new commits`,
   );
@@ -73,7 +73,12 @@ export async function getReleaseInfo(
     return;
   }
 
-  logger.info('Resolving new version and changelog');
+  const pkgJson = JSON.parse(
+    await fs.promises.readFile(path.join(ctx.cwd, 'package.json'), 'utf-8'),
+  );
+  logger.info(
+    `Current version is 'v${pkgJson.version}', resolving new version`,
+  );
 
   const conventionalCommits = newCommits
     .slice(0, lastReleaseIndex)
@@ -81,10 +86,6 @@ export async function getReleaseInfo(
       ...commitsParser.sync(commit.commit.message, parserOpts),
       hash: commit.sha,
     }));
-
-  const pkgJson = JSON.parse(
-    await fs.promises.readFile(path.join(ctx.cwd, 'package.json'), 'utf-8'),
-  );
 
   const bumpInfo: BumpInfo = recommendedBumpOpts.whatBump(conventionalCommits);
   const version = semver.inc(pkgJson.version, BUMP_LEVEL[bumpInfo.level])!;
@@ -103,11 +104,11 @@ export async function getReleaseInfo(
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 
-  logger.succ(`New version: ${version} - ${bumpInfo.reason}`);
-
   if (changelog.trim().split('\n').length === 1) {
     return;
   }
+
+  logger.succ(`New version: ${version} - ${bumpInfo.reason}`);
 
   return {
     version,

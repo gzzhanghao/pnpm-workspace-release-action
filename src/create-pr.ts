@@ -11,7 +11,8 @@ const logger = createLogger('pr');
 
 export async function createPr(ctx: Context) {
   try {
-    logger.info(`Resolving release info from '${ctx.cwd}'`);
+    logger.info('Resolving release info');
+
     const release = await getReleaseInfo(ctx);
 
     if (!release) {
@@ -20,7 +21,7 @@ export async function createPr(ctx: Context) {
     }
     logger.succ(`Release as v${release.version}`);
 
-    logger.info('Createing release patch');
+    logger.info('Generating release changeset');
 
     await Promise.all([
       updatePackages(ctx, release),
@@ -45,7 +46,7 @@ export async function createPr(ctx: Context) {
     logger.succ(
       existingPull
         ? `Existing PR found ${ctx.urls.pull}/${existingPull.number}`
-        : `No PR found`,
+        : 'No PR found',
     );
 
     const title = `chore: release v${release.version}`;
@@ -54,7 +55,7 @@ export async function createPr(ctx: Context) {
       existingPull &&
       (existingPull.title !== title || existingPull.body !== release.changelog)
     ) {
-      logger.info(`Updating existing PR title / body`);
+      logger.info('Updating existing PR');
 
       await Promise.all([
         ctx.octokit.pulls.update({
@@ -70,10 +71,10 @@ export async function createPr(ctx: Context) {
         }),
       ]);
 
-      logger.succ('Update existing PR succeed');
+      logger.succ('Existing PR updated');
     }
 
-    logger.info('Creating / updating PR with release patch');
+    logger.info(existingPull ? 'Updating existing PR' : 'Creating release PR');
 
     const pullNumber = await createPullRequest(ctx.octokit, ctx.changes, {
       upstreamOwner: ctx.repo.owner,

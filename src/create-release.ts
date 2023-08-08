@@ -42,10 +42,10 @@ export async function createRelease(ctx: Context) {
           return;
         }
 
-        logger.info(`Creating tag ref v${version} for '${pullUrl}'`);
+        logger.info(`Creating tag 'v${version}' for '${pullUrl}'`);
         await ensureTag(ctx, pull, version);
 
-        logger.info(`Createing GitHub release v${version}`);
+        logger.info(`Createing GitHub release 'v${version}'`);
         await ensureRelease(ctx, pull, version);
 
         logger.info(`Updating pending PR '${pullUrl}'`);
