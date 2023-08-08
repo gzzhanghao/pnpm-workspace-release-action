@@ -35566,7 +35566,26 @@ const GITHUB_ORIGIN = 'https://github.com';
 const PENDING_LABEL = 'autorelease: pending';
 const RELEASE_TITLE_REGEX = /^chore: release v(?<version>.+)$/;
 
+// EXTERNAL MODULE: ./node_modules/.pnpm/chalk@4.1.2/node_modules/chalk/source/index.js
+var source = __nccwpck_require__(9348);
+var source_default = /*#__PURE__*/__nccwpck_require__.n(source);
+;// CONCATENATED MODULE: ./src/shared/logger.ts
+
+function createLogger(name) {
+    const scope = source_default().gray(`[${name}]`);
+    return {
+        info: createLogFn(`${source_default().gray('❯')} ${scope}`, console.log),
+        succ: createLogFn(`${source_default().green('✔')} ${scope}`, console.log),
+        warn: createLogFn(`${source_default().yellow('⚠')} ${scope}`, console.warn),
+        fail: createLogFn(`${source_default().red('✗')} ${scope}`, console.error),
+    };
+}
+function createLogFn(prefix, logFn) {
+    return (...args) => logFn(prefix, ...args);
+}
+
 ;// CONCATENATED MODULE: ./src/get-release-info.ts
+
 
 
 
@@ -35577,8 +35596,10 @@ const RELEASE_TITLE_REGEX = /^chore: release v(?<version>.+)$/;
 
 const BUMP_LEVEL = ['major', 'minor', 'patch'];
 const parseArray = (conventional_changelog_writer_default()).parseArray;
+const logger = createLogger('release-info');
 async function getReleaseInfo(ctx) {
     const { parserOpts, writerOpts, recommendedBumpOpts } = await (conventional_changelog_angular_default());
+    logger.info(`Getting commits from '${ctx.cwd}'`);
     const commits = await getCommits({}, { cwd: ctx.cwd });
     const lastReleaseIndex = commits.findIndex((commit) => {
         if (commit.tags.some((tag) => semver.valid(tag))) {
@@ -35588,9 +35609,19 @@ async function getReleaseInfo(ctx) {
         return semver.valid(match?.groups?.version);
     });
     const newCommits = lastReleaseIndex >= 0 ? commits.slice(0, lastReleaseIndex) : commits;
+    if (lastReleaseIndex) {
+        logger.info(`Missing latest release commit`);
+    }
+    else {
+        const commit = commits[lastReleaseIndex];
+        const subject = commit.body.split('\n')[0];
+        logger.info(`Latest release commit is [${commit.hash}] '${subject}'`);
+    }
+    logger.succ(`Got ${commits.length} commits, ${newCommits.length} new commits`);
     if (!newCommits.length) {
         return;
     }
+    logger.info('Resolving new version and changelog');
     const conventionalCommits = newCommits
         .slice(0, lastReleaseIndex)
         .map((commit) => ({
@@ -35609,6 +35640,7 @@ async function getReleaseInfo(ctx) {
     }, writerOpts)
         .replace(/\n{3,}/g, '\n\n')
         .trim();
+    logger.succ(`New version: ${version} - ${bumpInfo.reason}`);
     if (changelog.trim().split('\n').length === 1) {
         return;
     }
@@ -35616,24 +35648,6 @@ async function getReleaseInfo(ctx) {
         version,
         changelog,
     };
-}
-
-// EXTERNAL MODULE: ./node_modules/.pnpm/chalk@4.1.2/node_modules/chalk/source/index.js
-var source = __nccwpck_require__(9348);
-var source_default = /*#__PURE__*/__nccwpck_require__.n(source);
-;// CONCATENATED MODULE: ./src/shared/logger.ts
-
-function createLogger(name) {
-    const scope = source_default().gray(`[${name}]`);
-    return {
-        info: createLogFn(`${source_default().gray('❯')} ${scope}`, console.log),
-        succ: createLogFn(`${source_default().green('✔')} ${scope}`, console.log),
-        warn: createLogFn(`${source_default().yellow('⚠')} ${scope}`, console.warn),
-        fail: createLogFn(`${source_default().red('✗')} ${scope}`, console.error),
-    };
-}
-function createLogFn(prefix, logFn) {
-    return (...args) => logFn(prefix, ...args);
 }
 
 ;// CONCATENATED MODULE: ./src/update-changelog.ts
@@ -35712,38 +35726,38 @@ async function updatePackages(ctx, release) {
 
 
 
-const logger = createLogger('pr');
+const create_pr_logger = createLogger('pr');
 async function createPr(ctx) {
     try {
-        logger.info(`Resolving release info from '${ctx.cwd}'`);
+        create_pr_logger.info(`Resolving release info from '${ctx.cwd}'`);
         const release = await getReleaseInfo(ctx);
         if (!release) {
-            logger.warn('Nothing to release');
+            create_pr_logger.warn('Nothing to release');
             return;
         }
-        logger.succ(`Release as v${release.version}`);
-        logger.info('Createing release patch');
+        create_pr_logger.succ(`Release as v${release.version}`);
+        create_pr_logger.info('Createing release patch');
         await Promise.all([
             updatePackages(ctx, release),
             updateChangelog(ctx, release),
         ]);
-        logger.succ(`Update ${ctx.changes.size} files`);
+        create_pr_logger.succ(`Update ${ctx.changes.size} files`);
         const releaseBranch = `release--${ctx.options.branch}`;
         const head = `${ctx.repo.owner}:${releaseBranch}`;
-        logger.info(`Fetching open PRs with head '${head}'`);
+        create_pr_logger.info(`Fetching open PRs with head '${head}'`);
         const existingPullsRes = await ctx.octokit.pulls.list({
             ...ctx.repo,
             head,
             state: 'open',
         });
         const existingPull = existingPullsRes.data[0];
-        logger.succ(existingPull
+        create_pr_logger.succ(existingPull
             ? `Existing PR found ${ctx.urls.pull}/${existingPull.number}`
             : `No PR found`);
         const title = `chore: release v${release.version}`;
         if (existingPull &&
             (existingPull.title !== title || existingPull.body !== release.changelog)) {
-            logger.info(`Updating existing PR title / body`);
+            create_pr_logger.info(`Updating existing PR title / body`);
             await Promise.all([
                 ctx.octokit.pulls.update({
                     ...ctx.repo,
@@ -35757,9 +35771,9 @@ async function createPr(ctx) {
                     labels: [PENDING_LABEL],
                 }),
             ]);
-            logger.succ('Update existing PR succeed');
+            create_pr_logger.succ('Update existing PR succeed');
         }
-        logger.info('Creating / updating PR with release patch');
+        create_pr_logger.info('Creating / updating PR with release patch');
         const pullNumber = await (0,src/* createPullRequest */.RL)(ctx.octokit, ctx.changes, {
             upstreamOwner: ctx.repo.owner,
             upstreamRepo: ctx.repo.repo,
@@ -35772,10 +35786,10 @@ async function createPr(ctx) {
             fork: false,
             labels: [PENDING_LABEL],
         });
-        logger.succ(`PR ${ctx.urls.pull}/${pullNumber} updated`);
+        create_pr_logger.succ(`PR ${ctx.urls.pull}/${pullNumber} updated`);
     }
     catch (error) {
-        logger.fail(error);
+        create_pr_logger.fail(error);
         throw error;
     }
 }
