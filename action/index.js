@@ -35765,6 +35765,7 @@ async function createPr(ctx) {
     }
     catch (error) {
         logger.fail(error);
+        throw error;
     }
 }
 
@@ -35808,6 +35809,7 @@ async function createRelease(ctx) {
     }
     catch (error) {
         create_release_logger.fail(error);
+        throw error;
     }
 }
 async function ensureTag(ctx, pull, version) {
