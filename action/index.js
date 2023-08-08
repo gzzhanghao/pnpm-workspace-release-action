@@ -31763,7 +31763,7 @@ const parseArray = (conventional_changelog_writer_default()).parseArray;
 const logger = createLogger('release-info');
 async function getReleaseInfo(ctx) {
     const { parserOpts, writerOpts, recommendedBumpOpts } = await (conventional_changelog_angular_default());
-    logger.info(`Getting commits from '${ctx.cwd}'`);
+    logger.info(`Fetching commits for '${ctx.options.branch}'`);
     const commitsRes = await ctx.octokit.repos.listCommits({
         ...ctx.repo,
         sha: ctx.options.branch,
@@ -31775,27 +31775,28 @@ async function getReleaseInfo(ctx) {
             .match(RELEASE_TITLE_REGEX);
         return semver.valid(match?.groups?.version);
     });
-    const newCommits = lastReleaseIndex >= 0 ? commits.slice(0, lastReleaseIndex) : commits;
     if (lastReleaseIndex) {
-        logger.info(`Missing latest release commit`);
+        logger.info('Latest release commit not found');
     }
     else {
         const commit = commits[lastReleaseIndex];
+        const sha = commit.sha.slice(0, 7);
         const subject = commit.commit.message.split('\n')[0];
-        logger.info(`Latest release commit is [${commit.sha.slice(0, 7)}] '${subject}'`);
+        logger.info(`Latest release commit is [${sha}] '${subject}'`);
     }
+    const newCommits = lastReleaseIndex >= 0 ? commits.slice(0, lastReleaseIndex) : commits;
     logger.succ(`Got ${commits.length} commits, ${newCommits.length} new commits`);
     if (!newCommits.length) {
         return;
     }
-    logger.info('Resolving new version and changelog');
+    const pkgJson = JSON.parse(await external_fs_default().promises.readFile(external_path_default().join(ctx.cwd, 'package.json'), 'utf-8'));
+    logger.info(`Current version is 'v${pkgJson.version}', resolving new version`);
     const conventionalCommits = newCommits
         .slice(0, lastReleaseIndex)
         .map((commit) => ({
         ...conventional_commits_parser_default().sync(commit.commit.message, parserOpts),
         hash: commit.sha,
     }));
-    const pkgJson = JSON.parse(await external_fs_default().promises.readFile(external_path_default().join(ctx.cwd, 'package.json'), 'utf-8'));
     const bumpInfo = recommendedBumpOpts.whatBump(conventionalCommits);
     const version = semver.inc(pkgJson.version, BUMP_LEVEL[bumpInfo.level]);
     const changelog = parseArray(conventionalCommits, {
@@ -31807,10 +31808,10 @@ async function getReleaseInfo(ctx) {
     }, writerOpts)
         .replace(/\n{3,}/g, '\n\n')
         .trim();
-    logger.succ(`New version: ${version} - ${bumpInfo.reason}`);
     if (changelog.trim().split('\n').length === 1) {
         return;
     }
+    logger.succ(`New version: ${version} - ${bumpInfo.reason}`);
     return {
         version,
         changelog,
@@ -31896,14 +31897,14 @@ async function updatePackages(ctx, release) {
 const create_pr_logger = createLogger('pr');
 async function createPr(ctx) {
     try {
-        create_pr_logger.info(`Resolving release info from '${ctx.cwd}'`);
+        create_pr_logger.info('Resolving release info');
         const release = await getReleaseInfo(ctx);
         if (!release) {
             create_pr_logger.warn('Nothing to release');
             return;
         }
         create_pr_logger.succ(`Release as v${release.version}`);
-        create_pr_logger.info('Createing release patch');
+        create_pr_logger.info('Generating release changeset');
         await Promise.all([
             updatePackages(ctx, release),
             updateChangelog(ctx, release),
@@ -31920,11 +31921,11 @@ async function createPr(ctx) {
         const existingPull = existingPullsRes.data[0];
         create_pr_logger.succ(existingPull
             ? `Existing PR found ${ctx.urls.pull}/${existingPull.number}`
-            : `No PR found`);
+            : 'No PR found');
         const title = `chore: release v${release.version}`;
         if (existingPull &&
             (existingPull.title !== title || existingPull.body !== release.changelog)) {
-            create_pr_logger.info(`Updating existing PR title / body`);
+            create_pr_logger.info('Updating existing PR');
             await Promise.all([
                 ctx.octokit.pulls.update({
                     ...ctx.repo,
@@ -31938,9 +31939,9 @@ async function createPr(ctx) {
                     labels: [PENDING_LABEL],
                 }),
             ]);
-            create_pr_logger.succ('Update existing PR succeed');
+            create_pr_logger.succ('Existing PR updated');
         }
-        create_pr_logger.info('Creating / updating PR with release patch');
+        create_pr_logger.info(existingPull ? 'Updating existing PR' : 'Creating release PR');
         const pullNumber = await (0,src/* createPullRequest */.RL)(ctx.octokit, ctx.changes, {
             upstreamOwner: ctx.repo.owner,
             upstreamRepo: ctx.repo.repo,
@@ -31973,8 +31974,7 @@ async function createRelease(ctx) {
             base: ctx.options.branch,
             state: 'closed',
         });
-        const pendingPulls = closedPullsRes.data.filter((pr) => pr.merge_commit_sha &&
-            pr.labels.some((label) => label.name === PENDING_LABEL));
+        const pendingPulls = closedPullsRes.data.filter((pr) => pr.merged_at && pr.labels.some((label) => label.name === PENDING_LABEL));
         create_release_logger.succ(`Found ${closedPullsRes.data.length} closed PRs and ${pendingPulls.length} pending release`);
         await Promise.all(pendingPulls.map(async (pull) => {
             const pullUrl = `${ctx.urls.pull}/${pull.number}`;
@@ -31984,9 +31984,9 @@ async function createRelease(ctx) {
                 create_release_logger.warn(`Failed to parse PR title '${pull.title}' for '${pullUrl}'`);
                 return;
             }
-            create_release_logger.info(`Creating tag ref v${version} for '${pullUrl}'`);
+            create_release_logger.info(`Creating tag 'v${version}' for '${pullUrl}'`);
             await ensureTag(ctx, pull, version);
-            create_release_logger.info(`Createing GitHub release v${version}`);
+            create_release_logger.info(`Createing GitHub release 'v${version}'`);
             await ensureRelease(ctx, pull, version);
             create_release_logger.info(`Updating pending PR '${pullUrl}'`);
             await ctx.octokit.issues.removeLabel({

@@ -21,8 +21,7 @@ export async function createRelease(ctx: Context) {
 
     const pendingPulls = closedPullsRes.data.filter(
       (pr) =>
-        pr.merge_commit_sha &&
-        pr.labels.some((label) => label.name === PENDING_LABEL),
+        pr.merged_at && pr.labels.some((label) => label.name === PENDING_LABEL),
     );
 
     logger.succ(
