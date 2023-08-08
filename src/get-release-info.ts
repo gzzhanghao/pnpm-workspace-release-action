@@ -9,6 +9,7 @@ import * as semver from 'semver';
 import { getCommits } from './get-commits';
 import { GITHUB_ORIGIN, RELEASE_TITLE_REGEX } from './shared/constants';
 import { Context } from './shared/context';
+import { createLogger } from './shared/logger';
 
 export interface ReleaseInfo {
   version: string;
@@ -29,11 +30,15 @@ const parseArray: (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ) => string = (changelogWriter as any).parseArray;
 
+const logger = createLogger('release-info');
+
 export async function getReleaseInfo(
   ctx: Context,
 ): Promise<ReleaseInfo | undefined> {
   const { parserOpts, writerOpts, recommendedBumpOpts } =
     await changelogAngular;
+
+  logger.info(`Getting commits from '${ctx.cwd}'`);
 
   const commits = await getCommits({}, { cwd: ctx.cwd });
 
@@ -47,9 +52,23 @@ export async function getReleaseInfo(
 
   const newCommits =
     lastReleaseIndex >= 0 ? commits.slice(0, lastReleaseIndex) : commits;
+
+  if (lastReleaseIndex) {
+    logger.info(`Missing latest release commit`);
+  } else {
+    const commit = commits[lastReleaseIndex];
+    const subject = commit.body.split('\n')[0];
+    logger.info(`Latest release commit is [${commit.hash}] '${subject}'`);
+  }
+  logger.succ(
+    `Got ${commits.length} commits, ${newCommits.length} new commits`,
+  );
+
   if (!newCommits.length) {
     return;
   }
+
+  logger.info('Resolving new version and changelog');
 
   const conventionalCommits = newCommits
     .slice(0, lastReleaseIndex)
@@ -78,6 +97,8 @@ export async function getReleaseInfo(
   )
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+
+  logger.succ(`New version: ${version} - ${bumpInfo.reason}`);
 
   if (changelog.trim().split('\n').length === 1) {
     return;
