@@ -35753,12 +35753,13 @@ async function createPr(ctx) {
         const pullNumber = await (0,src/* createPullRequest */.RL)(ctx.octokit, ctx.changes, {
             upstreamOwner: ctx.repo.owner,
             upstreamRepo: ctx.repo.repo,
-            branch: releaseBranch,
-            primary: ctx.options.branch,
-            force: true,
             description: release.changelog,
             title,
+            branch: releaseBranch,
+            primary: ctx.options.branch,
             message: title,
+            force: true,
+            fork: false,
             labels: [PENDING_LABEL],
         });
         logger.succ(`PR ${ctx.urls.pull}/${pullNumber} updated`);

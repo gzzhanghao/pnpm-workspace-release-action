@@ -78,12 +78,13 @@ export async function createPr(ctx: Context) {
     const pullNumber = await createPullRequest(ctx.octokit, ctx.changes, {
       upstreamOwner: ctx.repo.owner,
       upstreamRepo: ctx.repo.repo,
-      branch: releaseBranch,
-      primary: ctx.options.branch,
-      force: true,
       description: release.changelog,
       title,
+      branch: releaseBranch,
+      primary: ctx.options.branch,
       message: title,
+      force: true,
+      fork: false,
       labels: [PENDING_LABEL],
     });
 
