@@ -63,6 +63,7 @@ export async function createRelease(ctx: Context) {
     );
   } catch (error) {
     logger.fail(error);
+    throw error;
   }
 }
 

@@ -90,5 +90,6 @@ export async function createPr(ctx: Context) {
     logger.succ(`PR ${ctx.urls.pull}/${pullNumber} updated`);
   } catch (error) {
     logger.fail(error);
+    throw error;
   }
 }
