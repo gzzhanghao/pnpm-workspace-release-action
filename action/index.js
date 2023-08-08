@@ -31967,7 +31967,7 @@ async function createPr(ctx) {
 const create_release_logger = createLogger('release');
 async function createRelease(ctx) {
     try {
-        create_release_logger.info(`Fetching closed PRs with base ${ctx.options.branch}`);
+        create_release_logger.info(`Fetching closed PRs with base '${ctx.options.branch}'`);
         const closedPullsRes = await ctx.octokit.pulls.list({
             ...ctx.repo,
             base: ctx.options.branch,
@@ -31977,7 +31977,6 @@ async function createRelease(ctx) {
             pr.labels.some((label) => label.name === PENDING_LABEL));
         create_release_logger.succ(`Found ${closedPullsRes.data.length} closed PRs and ${pendingPulls.length} pending release`);
         await Promise.all(pendingPulls.map(async (pull) => {
-            pull.title = 'chore: release v0.1.0';
             const pullUrl = `${ctx.urls.pull}/${pull.number}`;
             const match = pull.title.match(RELEASE_TITLE_REGEX);
             const version = match?.groups?.version;

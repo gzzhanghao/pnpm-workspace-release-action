@@ -11,7 +11,7 @@ type PullRequest =
 
 export async function createRelease(ctx: Context) {
   try {
-    logger.info(`Fetching closed PRs with base ${ctx.options.branch}`);
+    logger.info(`Fetching closed PRs with base '${ctx.options.branch}'`);
 
     const closedPullsRes = await ctx.octokit.pulls.list({
       ...ctx.repo,
@@ -31,7 +31,6 @@ export async function createRelease(ctx: Context) {
 
     await Promise.all(
       pendingPulls.map(async (pull) => {
-        pull.title = 'chore: release v0.1.0';
         const pullUrl = `${ctx.urls.pull}/${pull.number}`;
 
         const match = pull.title.match(RELEASE_TITLE_REGEX);
