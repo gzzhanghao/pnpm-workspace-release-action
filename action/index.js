@@ -35501,10 +35501,8 @@ __nccwpck_require__.r(__webpack_exports__);
 
 // EXTERNAL MODULE: ./node_modules/.pnpm/@actions+core@1.10.0/node_modules/@actions/core/lib/core.js
 var core = __nccwpck_require__(7733);
-var core_default = /*#__PURE__*/__nccwpck_require__.n(core);
 // EXTERNAL MODULE: ./node_modules/.pnpm/@actions+github@5.1.1/node_modules/@actions/github/lib/github.js
 var github = __nccwpck_require__(3695);
-var github_default = /*#__PURE__*/__nccwpck_require__.n(github);
 // EXTERNAL MODULE: ./node_modules/.pnpm/code-suggester@4.3.3/node_modules/code-suggester/build/src/index.js
 var src = __nccwpck_require__(2115);
 // EXTERNAL MODULE: external "fs"
@@ -35883,25 +35881,25 @@ class Context {
 
 
 async function main() {
-    if ((github_default()).context.eventName !== 'push') {
+    if (github.context.eventName !== 'push') {
         return;
     }
-    const payload = (github_default()).context.payload;
+    const payload = github.context.payload;
     if (!payload.ref.startsWith('refs/heads/')) {
         return;
     }
     const branch = payload.ref.slice('refs/heads/'.length);
     const ctx = new Context({
         cwd: process.cwd(),
-        repo: (github_default()).context.repo,
+        repo: github.context.repo,
         branch,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        octokit: github_default().getOctokit(core_default().getInput('token')).rest,
+        octokit: github.getOctokit(core.getInput('token')).rest,
     });
     await Promise.all([createPr(ctx), createRelease(ctx)]);
 }
 main().catch((error) => {
-    core_default().setFailed(`pnpm-workspace-release failed: ${error.message}`);
+    core.setFailed(`pnpm-workspace-release failed: ${error.message}`);
 });
 
 })();
