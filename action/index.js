@@ -31728,7 +31728,6 @@ var conventional_commits_parser_default = /*#__PURE__*/__nccwpck_require__.n(con
 var semver = __nccwpck_require__(8884);
 ;// CONCATENATED MODULE: ./src/shared/constants.ts
 const GITHUB_ORIGIN = 'https://github.com';
-const PENDING_LABEL = 'autorelease: pending';
 const RELEASE_TITLE_REGEX = /^chore: release v(?<version>.+)$/;
 
 // EXTERNAL MODULE: ./node_modules/.pnpm/chalk@4.1.2/node_modules/chalk/source/index.js
@@ -31920,7 +31919,6 @@ async function updatePackages(ctx, release) {
 
 
 
-
 const create_pr_logger = createLogger('pr');
 async function createPr(ctx) {
     try {
@@ -31953,19 +31951,12 @@ async function createPr(ctx) {
         if (existingPull &&
             (existingPull.title !== title || existingPull.body !== release.changelog)) {
             create_pr_logger.info('Updating existing PR');
-            await Promise.all([
-                ctx.octokit.pulls.update({
-                    ...ctx.repo,
-                    pull_number: existingPull.number,
-                    title,
-                    body: release.changelog,
-                }),
-                ctx.octokit.issues.addLabels({
-                    ...ctx.repo,
-                    issue_number: existingPull.number,
-                    labels: [PENDING_LABEL],
-                }),
-            ]);
+            await ctx.octokit.pulls.update({
+                ...ctx.repo,
+                pull_number: existingPull.number,
+                title,
+                body: release.changelog,
+            });
             create_pr_logger.succ('Existing PR updated');
         }
         create_pr_logger.info(existingPull ? 'Updating existing PR' : 'Creating release PR');
@@ -31979,7 +31970,6 @@ async function createPr(ctx) {
             message: title,
             force: true,
             fork: false,
-            labels: [PENDING_LABEL],
         });
         create_pr_logger.succ(`PR ${ctx.urls.pull}/${pullNumber} updated`);
     }

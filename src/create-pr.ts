@@ -1,7 +1,6 @@
 import { createPullRequest } from 'code-suggester';
 
 import { getReleaseInfo } from './get-release-info';
-import { PENDING_LABEL } from './shared/constants';
 import { Context } from './shared/context';
 import { createLogger } from './shared/logger';
 import { updateChangelog } from './update-changelog';
@@ -56,19 +55,12 @@ export async function createPr(ctx: Context) {
     ) {
       logger.info('Updating existing PR');
 
-      await Promise.all([
-        ctx.octokit.pulls.update({
-          ...ctx.repo,
-          pull_number: existingPull.number,
-          title,
-          body: release.changelog,
-        }),
-        ctx.octokit.issues.addLabels({
-          ...ctx.repo,
-          issue_number: existingPull.number,
-          labels: [PENDING_LABEL],
-        }),
-      ]);
+      await ctx.octokit.pulls.update({
+        ...ctx.repo,
+        pull_number: existingPull.number,
+        title,
+        body: release.changelog,
+      });
 
       logger.succ('Existing PR updated');
     }
@@ -85,7 +77,6 @@ export async function createPr(ctx: Context) {
       message: title,
       force: true,
       fork: false,
-      labels: [PENDING_LABEL],
     });
 
     logger.succ(`PR ${ctx.urls.pull}/${pullNumber} updated`);
