@@ -31748,7 +31748,40 @@ function createLogFn(prefix, logFn) {
     return (...args) => logFn(prefix, ...args);
 }
 
+;// CONCATENATED MODULE: ./src/shared/next-version.ts
+
+function getNextVersion(version, level, preVersion, preid) {
+    if (!preVersion) {
+        if (!preid) {
+            return {
+                version: semver.inc(version, level),
+            };
+        }
+        return {
+            version: semver.inc(version, `pre${level}`, preid),
+            preVersion: version,
+        };
+    }
+    let bumpFromCurrent;
+    let bumpFromPre;
+    if (preid) {
+        bumpFromCurrent = semver.inc(version, 'prerelease', preid);
+        bumpFromPre = semver.inc(preVersion, `pre${level}`, preid);
+    }
+    else {
+        bumpFromCurrent = version.split('-')[0];
+        bumpFromPre = semver.inc(preVersion, level);
+    }
+    return {
+        version: semver.gt(bumpFromCurrent, bumpFromPre)
+            ? bumpFromCurrent
+            : bumpFromPre,
+        preVersion,
+    };
+}
+
 ;// CONCATENATED MODULE: ./src/get-release-info.ts
+
 
 
 
@@ -31797,7 +31830,7 @@ async function getReleaseInfo(ctx) {
         hash: commit.sha,
     }));
     const bumpInfo = recommendedBumpOpts.whatBump(conventionalCommits);
-    const { version, preVersion } = getNextVersion(pkgJson, bumpInfo.level, ctx.options.preid);
+    const { version, preVersion } = getNextVersion(pkgJson.version, BUMP_LEVEL[bumpInfo.level], pkgJson.autorelease?.preVersion, ctx.options.preid);
     const changelog = parseArray(conventionalCommits, {
         version,
         host: GITHUB_ORIGIN,
@@ -31813,29 +31846,9 @@ async function getReleaseInfo(ctx) {
     logger.succ(`New version: ${version} - ${bumpInfo.reason}`);
     return {
         version,
-        changelog,
         preVersion,
+        changelog,
     };
-}
-function getNextVersion(pkgJson, level, preid) {
-    if (!preid) {
-        return {
-            version: semver.inc(pkgJson.version, BUMP_LEVEL[level]),
-        };
-    }
-    const preVersion = pkgJson.autorelease?.preVersion;
-    if (!preVersion || !semver.parse(pkgJson.version)?.prerelease.length) {
-        return {
-            version: semver.inc(pkgJson.version, `pre${BUMP_LEVEL[level]}`, preid),
-            preVersion: pkgJson.version,
-        };
-    }
-    const bumpFromPre = semver.inc(preVersion, `pre${BUMP_LEVEL[level]}`, preid);
-    const bumpFromCurrent = semver.inc(pkgJson.version, 'prerelease', preid);
-    if (semver.gt(bumpFromPre, bumpFromCurrent)) {
-        return { version: bumpFromPre, preVersion };
-    }
-    return { version: bumpFromCurrent, preVersion };
 }
 
 ;// CONCATENATED MODULE: ./src/update-changelog.ts
@@ -31902,7 +31915,7 @@ async function updatePackages(ctx, release) {
         for (const deps of depsList) {
             stabilizeWorkspaceVersion(deps);
         }
-        if (pkg.path === ctx.cwd && release.preVersion) {
+        if (pkg.path === ctx.cwd) {
             if (!pkgJson.autorelease) {
                 pkgJson.autorelease = {};
             }

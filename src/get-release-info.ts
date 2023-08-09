@@ -9,6 +9,7 @@ import * as semver from 'semver';
 import { GITHUB_ORIGIN, RELEASE_TITLE_REGEX } from './shared/constants';
 import { Context } from './shared/context';
 import { createLogger } from './shared/logger';
+import { getNextVersion } from './shared/next-version';
 
 export interface ReleaseInfo {
   version: string;
@@ -91,8 +92,9 @@ export async function getReleaseInfo(
   const bumpInfo: BumpInfo = recommendedBumpOpts.whatBump(conventionalCommits);
 
   const { version, preVersion } = getNextVersion(
-    pkgJson,
-    bumpInfo.level,
+    pkgJson.version,
+    BUMP_LEVEL[bumpInfo.level],
+    pkgJson.autorelease?.preVersion,
     ctx.options.preid,
   );
 
@@ -118,39 +120,7 @@ export async function getReleaseInfo(
 
   return {
     version,
-    changelog,
     preVersion,
+    changelog,
   };
-}
-
-interface PkgJson {
-  version: string;
-  autorelease?: {
-    preVersion?: string;
-  };
-}
-
-function getNextVersion(
-  pkgJson: PkgJson,
-  level: number,
-  preid?: string,
-): { version: string; preVersion?: string } {
-  if (!preid) {
-    return {
-      version: semver.inc(pkgJson.version, BUMP_LEVEL[level])!,
-    };
-  }
-  const preVersion = pkgJson.autorelease?.preVersion;
-  if (!preVersion || !semver.parse(pkgJson.version)?.prerelease.length) {
-    return {
-      version: semver.inc(pkgJson.version, `pre${BUMP_LEVEL[level]}`, preid)!,
-      preVersion: pkgJson.version,
-    };
-  }
-  const bumpFromPre = semver.inc(preVersion, `pre${BUMP_LEVEL[level]}`, preid)!;
-  const bumpFromCurrent = semver.inc(pkgJson.version, 'prerelease', preid)!;
-  if (semver.gt(bumpFromPre, bumpFromCurrent)) {
-    return { version: bumpFromPre, preVersion };
-  }
-  return { version: bumpFromCurrent, preVersion };
 }
