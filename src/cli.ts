@@ -11,6 +11,7 @@ program
   .option('--token <token>', 'GitHub token with repo write permissions')
   .option('--repo-url <url>', 'GitHub repository URL')
   .option('--branch <branch>', 'The upstream branch to open a PR against')
+  .option('--sha <sha>')
   .action(release);
 
 program.parse(process.argv);
@@ -18,8 +19,9 @@ program.parse(process.argv);
 export interface CliOptions {
   cwd: string;
   token: string;
-  branch: string;
   repoUrl: string;
+  branch: string;
+  sha: string;
 }
 
 async function release(options: CliOptions) {
@@ -30,12 +32,11 @@ async function release(options: CliOptions) {
     cwd: options.cwd,
     repo: { owner, repo },
     branch: options.branch,
+    sha: options.sha,
     octokit: new Octokit({
       auth: options.token,
     }),
   });
 
-  await createRelease(ctx);
-
-  await createPr(ctx);
+  await Promise.all([createRelease(ctx), createPr(ctx)]);
 }

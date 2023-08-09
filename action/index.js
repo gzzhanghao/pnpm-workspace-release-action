@@ -31965,37 +31965,32 @@ async function createPr(ctx) {
 ;// CONCATENATED MODULE: ./src/create-release.ts
 
 
+
 const create_release_logger = createLogger('release');
 async function createRelease(ctx) {
     try {
-        create_release_logger.info(`Fetching closed PRs with base '${ctx.options.branch}'`);
-        const closedPullsRes = await ctx.octokit.pulls.list({
+        create_release_logger.info(`Fetching associated PR with commit '${ctx.options.sha}'`);
+        const pullsRes = await ctx.octokit.repos.listPullRequestsAssociatedWithCommit({
             ...ctx.repo,
-            base: ctx.options.branch,
-            state: 'closed',
+            commit_sha: ctx.options.sha,
         });
-        const pendingPulls = closedPullsRes.data.filter((pr) => pr.merged_at && pr.labels.some((label) => label.name === PENDING_LABEL));
-        create_release_logger.succ(`Found ${closedPullsRes.data.length} closed PRs and ${pendingPulls.length} pending release`);
-        await Promise.all(pendingPulls.map(async (pull) => {
-            const pullUrl = `${ctx.urls.pull}/${pull.number}`;
-            const match = pull.title.match(RELEASE_TITLE_REGEX);
-            const version = match?.groups?.version;
-            if (!version) {
-                create_release_logger.warn(`Failed to parse PR title '${pull.title}' for '${pullUrl}'`);
-                return;
-            }
-            create_release_logger.info(`Creating tag 'v${version}' for '${pullUrl}'`);
-            await ensureTag(ctx, pull, version);
-            create_release_logger.info(`Createing GitHub release 'v${version}'`);
-            await ensureRelease(ctx, pull, version);
-            create_release_logger.info(`Updating pending PR '${pullUrl}'`);
-            await ctx.octokit.issues.removeLabel({
-                ...ctx.repo,
-                issue_number: pull.number,
-                name: PENDING_LABEL,
-            });
-            create_release_logger.succ(`PR '${pullUrl}' marked published`);
-        }));
+        const pull = pullsRes.data[0];
+        if (!pull) {
+            create_release_logger.warn('No associated PR found');
+            return;
+        }
+        create_release_logger.succ(`Found '${pull.html_url}'`);
+        const match = pull.title.match(RELEASE_TITLE_REGEX);
+        const version = match?.groups?.version;
+        if (!version) {
+            create_release_logger.warn(`Failed to parse PR title '${pull.title}'`);
+            return;
+        }
+        create_release_logger.info(`Creating tag 'v${version}'`);
+        await ensureTag(ctx, pull, version);
+        create_release_logger.info(`Createing GitHub release 'v${version}'`);
+        await ensureRelease(ctx, pull, version);
+        core.setOutput('release', JSON.stringify({ version }));
     }
     catch (error) {
         create_release_logger.fail(error);
@@ -32085,11 +32080,11 @@ async function main() {
         cwd: process.cwd(),
         repo: github.context.repo,
         branch,
+        sha: payload.after,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         octokit: github.getOctokit(core.getInput('token')).rest,
     });
-    await createRelease(ctx);
-    await createPr(ctx);
+    await Promise.all([createRelease(ctx), createPr(ctx)]);
 }
 main().catch((error) => {
     core.setFailed(`pnpm-workspace-release failed: ${error.message}`);

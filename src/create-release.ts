@@ -1,62 +1,46 @@
+import * as core from '@actions/core';
 import { RestEndpointMethodTypes } from '@octokit/rest';
 
-import { PENDING_LABEL, RELEASE_TITLE_REGEX } from './shared/constants';
+import { RELEASE_TITLE_REGEX } from './shared/constants';
 import { Context } from './shared/context';
 import { createLogger } from './shared/logger';
 
 const logger = createLogger('release');
 
 type PullRequest =
-  RestEndpointMethodTypes['pulls']['list']['response']['data'][number];
+  RestEndpointMethodTypes['repos']['listPullRequestsAssociatedWithCommit']['response']['data'][number];
 
 export async function createRelease(ctx: Context) {
   try {
-    logger.info(`Fetching closed PRs with base '${ctx.options.branch}'`);
+    logger.info(`Fetching associated PR with commit '${ctx.options.sha}'`);
 
-    const closedPullsRes = await ctx.octokit.pulls.list({
-      ...ctx.repo,
-      base: ctx.options.branch,
-      state: 'closed',
-    });
+    const pullsRes =
+      await ctx.octokit.repos.listPullRequestsAssociatedWithCommit({
+        ...ctx.repo,
+        commit_sha: ctx.options.sha,
+      });
 
-    const pendingPulls = closedPullsRes.data.filter(
-      (pr) =>
-        pr.merged_at && pr.labels.some((label) => label.name === PENDING_LABEL),
-    );
+    const pull = pullsRes.data[0];
+    if (!pull) {
+      logger.warn('No associated PR found');
+      return;
+    }
+    logger.succ(`Found '${pull.html_url}'`);
 
-    logger.succ(
-      `Found ${closedPullsRes.data.length} closed PRs and ${pendingPulls.length} pending release`,
-    );
+    const match = pull.title.match(RELEASE_TITLE_REGEX);
+    const version = match?.groups?.version;
+    if (!version) {
+      logger.warn(`Failed to parse PR title '${pull.title}'`);
+      return;
+    }
 
-    await Promise.all(
-      pendingPulls.map(async (pull) => {
-        const pullUrl = `${ctx.urls.pull}/${pull.number}`;
+    logger.info(`Creating tag 'v${version}'`);
+    await ensureTag(ctx, pull, version);
 
-        const match = pull.title.match(RELEASE_TITLE_REGEX);
-        const version = match?.groups?.version;
-        if (!version) {
-          logger.warn(
-            `Failed to parse PR title '${pull.title}' for '${pullUrl}'`,
-          );
-          return;
-        }
+    logger.info(`Createing GitHub release 'v${version}'`);
+    await ensureRelease(ctx, pull, version);
 
-        logger.info(`Creating tag 'v${version}' for '${pullUrl}'`);
-        await ensureTag(ctx, pull, version);
-
-        logger.info(`Createing GitHub release 'v${version}'`);
-        await ensureRelease(ctx, pull, version);
-
-        logger.info(`Updating pending PR '${pullUrl}'`);
-        await ctx.octokit.issues.removeLabel({
-          ...ctx.repo,
-          issue_number: pull.number,
-          name: PENDING_LABEL,
-        });
-
-        logger.succ(`PR '${pullUrl}' marked published`);
-      }),
-    );
+    core.setOutput('release', JSON.stringify({ version }));
   } catch (error) {
     logger.fail(error);
     throw error;

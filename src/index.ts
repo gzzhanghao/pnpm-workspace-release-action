@@ -20,13 +20,12 @@ async function main() {
     cwd: process.cwd(),
     repo: github.context.repo,
     branch,
+    sha: payload.after,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     octokit: github.getOctokit(core.getInput('token')).rest as any,
   });
 
-  await createRelease(ctx);
-
-  await createPr(ctx);
+  await Promise.all([createRelease(ctx), createPr(ctx)]);
 }
 
 main().catch((error) => {

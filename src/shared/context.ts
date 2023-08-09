@@ -7,6 +7,7 @@ export interface ContextOptions {
   cwd: string;
   repo: RepoInfo;
   branch: string;
+  sha: string;
   octokit: Octokit;
 }
 
