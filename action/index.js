@@ -31903,7 +31903,7 @@ async function updatePackages(ctx, release) {
         for (const deps of depsList) {
             stabilizeWorkspaceVersion(deps);
         }
-        if (release.preVersion) {
+        if (pkg.path === ctx.cwd && release.preVersion) {
             if (!pkgJson.autorelease) {
                 pkgJson.autorelease = {};
             }
@@ -32054,6 +32054,7 @@ async function ensureRelease(ctx, pull, version) {
         ...ctx.repo,
         tag_name: `v${version}`,
         body: pull.body || undefined,
+        make_latest: ctx.options.latest ? 'true' : 'false',
     });
     create_release_logger.succ(`GitHub release v${version} created`);
 }
@@ -32112,6 +32113,7 @@ async function main() {
         branch,
         sha: payload.after,
         preid: core.getInput('preid'),
+        latest: core.getBooleanInput('latest'),
     });
     await Promise.all([createRelease(ctx), createPr(ctx)]);
 }

@@ -34,7 +34,7 @@ export async function updatePackages(ctx: Context, release: ReleaseInfo) {
     for (const deps of depsList) {
       stabilizeWorkspaceVersion(deps);
     }
-    if (release.preVersion) {
+    if (pkg.path === ctx.cwd && release.preVersion) {
       if (!pkgJson.autorelease) {
         pkgJson.autorelease = {};
       }
