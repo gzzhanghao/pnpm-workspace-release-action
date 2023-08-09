@@ -1,11 +1,17 @@
 name: 'pnpm-workspace-release-action'
 description: 'automated releases for pnpm based on conventional commits'
 author: Jason
+
 inputs:
   token:
     description: 'GitHub token for creating and grooming release PRs, defaults to using secrets.GITHUB_TOKEN'
     required: false
     default: ${{ github.token }}
+
+outputs:
+  release:
+    description: Published release info
+
 runs:
   using: 'node16'
   main: 'action/index.js'
