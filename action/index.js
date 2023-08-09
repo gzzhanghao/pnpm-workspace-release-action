@@ -31799,13 +31799,21 @@ async function getReleaseInfo(ctx) {
     const commitsRes = await ctx.octokit.repos.listCommits({
         ...ctx.repo,
         sha: ctx.options.branch,
+        per_page: 100,
     });
     const commits = commitsRes.data;
     const lastReleaseIndex = commits.findIndex((commit) => {
         const match = commit.commit.message
             .split('\n')[0]
             .match(RELEASE_TITLE_REGEX);
-        return semver.valid(match?.groups?.version);
+        const version = match?.groups?.version;
+        if (!semver.valid(version)) {
+            return false;
+        }
+        if (ctx.options.preid) {
+            return true;
+        }
+        return !semver.prerelease(version);
     });
     if (lastReleaseIndex) {
         logger.info('Latest release commit not found');
@@ -32114,8 +32122,8 @@ async function main() {
         repo: github.context.repo,
         branch,
         sha: payload.after,
-        preid: core.getInput('preid'),
-        latest: core.getBooleanInput('latest'),
+        preid: core.getInput('preid') || undefined,
+        latest: core.getBooleanInput('latest') || undefined,
     });
     await Promise.all([createRelease(ctx), createPr(ctx)]);
 }

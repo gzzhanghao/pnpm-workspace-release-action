@@ -24,8 +24,8 @@ async function main() {
     repo: github.context.repo,
     branch,
     sha: payload.after,
-    preid: core.getInput('preid'),
-    latest: core.getBooleanInput('latest'),
+    preid: core.getInput('preid') || undefined,
+    latest: core.getBooleanInput('latest') || undefined,
   });
 
   await Promise.all([createRelease(ctx), createPr(ctx)]);
