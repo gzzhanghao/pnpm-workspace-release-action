@@ -35,10 +35,9 @@ export async function updatePackages(ctx: Context, release: ReleaseInfo) {
       stabilizeWorkspaceVersion(deps);
     }
     if (pkg.path === ctx.cwd) {
-      if (!pkgJson.autorelease) {
-        pkgJson.autorelease = {};
-      }
-      pkgJson.autorelease.preVersion = release.preVersion;
+      pkgJson.autorelease = release.preVersion
+        ? { preVersion: release.preVersion }
+        : undefined;
     }
 
     await ctx.writeFile(

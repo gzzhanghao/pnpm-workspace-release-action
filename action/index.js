@@ -31776,7 +31776,7 @@ function getNextVersion(version, level, preVersion, preid) {
         version: semver.gt(bumpFromCurrent, bumpFromPre)
             ? bumpFromCurrent
             : bumpFromPre,
-        preVersion,
+        preVersion: preid ? preVersion : undefined,
     };
 }
 
@@ -31916,10 +31916,9 @@ async function updatePackages(ctx, release) {
             stabilizeWorkspaceVersion(deps);
         }
         if (pkg.path === ctx.cwd) {
-            if (!pkgJson.autorelease) {
-                pkgJson.autorelease = {};
-            }
-            pkgJson.autorelease.preVersion = release.preVersion;
+            pkgJson.autorelease = release.preVersion
+                ? { preVersion: release.preVersion }
+                : undefined;
         }
         await ctx.writeFile(external_path_default().relative(ctx.cwd, pkgPath), `${JSON.stringify(pkgJson, null, 2)}\n`);
     };

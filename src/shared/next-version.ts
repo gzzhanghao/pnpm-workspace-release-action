@@ -30,6 +30,6 @@ export function getNextVersion(
     version: semver.gt(bumpFromCurrent, bumpFromPre)
       ? bumpFromCurrent
       : bumpFromPre,
-    preVersion,
+    preVersion: preid ? preVersion : undefined,
   };
 }

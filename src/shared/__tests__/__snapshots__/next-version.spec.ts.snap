@@ -41,7 +41,7 @@ exports[`calc 1.0.0 + patch - alpha 1`] = `
 
 exports[`calc 1.0.1-alpha.0 + major 1.0.0 - 1`] = `
 {
-  "preVersion": "1.0.0",
+  "preVersion": undefined,
   "version": "2.0.0",
 }
 `;
@@ -62,7 +62,7 @@ exports[`calc 1.0.1-alpha.0 + major 1.0.0 beta 1`] = `
 
 exports[`calc 1.0.1-alpha.0 + minor 1.0.0 - 1`] = `
 {
-  "preVersion": "1.0.0",
+  "preVersion": undefined,
   "version": "1.1.0",
 }
 `;
@@ -83,7 +83,7 @@ exports[`calc 1.0.1-alpha.0 + minor 1.0.0 beta 1`] = `
 
 exports[`calc 1.0.1-alpha.0 + patch 1.0.0 - 1`] = `
 {
-  "preVersion": "1.0.0",
+  "preVersion": undefined,
   "version": "1.0.1",
 }
 `;
@@ -104,7 +104,7 @@ exports[`calc 1.0.1-alpha.0 + patch 1.0.0 beta 1`] = `
 
 exports[`calc 1.1.0-alpha.0 + major 1.0.0 - 1`] = `
 {
-  "preVersion": "1.0.0",
+  "preVersion": undefined,
   "version": "2.0.0",
 }
 `;
@@ -125,7 +125,7 @@ exports[`calc 1.1.0-alpha.0 + major 1.0.0 beta 1`] = `
 
 exports[`calc 1.1.0-alpha.0 + minor 1.0.0 - 1`] = `
 {
-  "preVersion": "1.0.0",
+  "preVersion": undefined,
   "version": "1.1.0",
 }
 `;
@@ -146,7 +146,7 @@ exports[`calc 1.1.0-alpha.0 + minor 1.0.0 beta 1`] = `
 
 exports[`calc 1.1.0-alpha.0 + patch 1.0.0 - 1`] = `
 {
-  "preVersion": "1.0.0",
+  "preVersion": undefined,
   "version": "1.1.0",
 }
 `;
@@ -167,7 +167,7 @@ exports[`calc 1.1.0-alpha.0 + patch 1.0.0 beta 1`] = `
 
 exports[`calc 2.0.0-alpha.0 + major 1.0.0 - 1`] = `
 {
-  "preVersion": "1.0.0",
+  "preVersion": undefined,
   "version": "2.0.0",
 }
 `;
@@ -188,7 +188,7 @@ exports[`calc 2.0.0-alpha.0 + major 1.0.0 beta 1`] = `
 
 exports[`calc 2.0.0-alpha.0 + minor 1.0.0 - 1`] = `
 {
-  "preVersion": "1.0.0",
+  "preVersion": undefined,
   "version": "2.0.0",
 }
 `;
@@ -209,7 +209,7 @@ exports[`calc 2.0.0-alpha.0 + minor 1.0.0 beta 1`] = `
 
 exports[`calc 2.0.0-alpha.0 + patch 1.0.0 - 1`] = `
 {
-  "preVersion": "1.0.0",
+  "preVersion": undefined,
   "version": "2.0.0",
 }
 `;
