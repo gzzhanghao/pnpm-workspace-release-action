@@ -4,13 +4,18 @@ author: Jason
 
 inputs:
   token:
-    description: 'GitHub token for creating and grooming release PRs, defaults to using secrets.GITHUB_TOKEN'
+    description: GitHub token for creating and grooming release PRs, defaults to using secrets.GITHUB_TOKEN
     required: false
     default: ${{ github.token }}
 
-outputs:
-  release:
-    description: Published release info
+  preid:
+    description: Identifier to be used to prefix prerelease version increments
+    required: false
+
+  latest:
+    description: Whether the release should be set as the latest release
+    required: false
+    default: false
 
 runs:
   using: 'node16'

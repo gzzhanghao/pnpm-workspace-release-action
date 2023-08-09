@@ -12,7 +12,6 @@ const logger = createLogger('pr');
 export async function createPr(ctx: Context) {
   try {
     logger.info('Resolving release info');
-
     const release = await getReleaseInfo(ctx);
 
     if (!release) {

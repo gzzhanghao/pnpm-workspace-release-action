@@ -13,6 +13,7 @@ import { createLogger } from './shared/logger';
 export interface ReleaseInfo {
   version: string;
   changelog: string;
+  preVersion?: string;
 }
 
 interface BumpInfo {
@@ -20,7 +21,7 @@ interface BumpInfo {
   reason: string;
 }
 
-const BUMP_LEVEL: semver.ReleaseType[] = ['major', 'minor', 'patch'];
+const BUMP_LEVEL = ['major', 'minor', 'patch'] as const;
 
 const parseArray: (
   commits: Partial<changelogWriter.TransformedCommit>[],
@@ -88,7 +89,12 @@ export async function getReleaseInfo(
     }));
 
   const bumpInfo: BumpInfo = recommendedBumpOpts.whatBump(conventionalCommits);
-  const version = semver.inc(pkgJson.version, BUMP_LEVEL[bumpInfo.level])!;
+
+  const { version, preVersion } = getNextVersion(
+    pkgJson,
+    bumpInfo.level,
+    ctx.options.preid,
+  );
 
   const changelog = parseArray(
     conventionalCommits as unknown as changelogWriter.TransformedCommit[],
@@ -113,5 +119,38 @@ export async function getReleaseInfo(
   return {
     version,
     changelog,
+    preVersion,
   };
+}
+
+interface PkgJson {
+  version: string;
+  autorelease?: {
+    preVersion?: string;
+  };
+}
+
+function getNextVersion(
+  pkgJson: PkgJson,
+  level: number,
+  preid?: string,
+): { version: string; preVersion?: string } {
+  if (!preid) {
+    return {
+      version: semver.inc(pkgJson.version, BUMP_LEVEL[level])!,
+    };
+  }
+  const preVersion = pkgJson.autorelease?.preVersion;
+  if (!preVersion || !semver.parse(pkgJson.version)?.prerelease.length) {
+    return {
+      version: semver.inc(pkgJson.version, `pre${BUMP_LEVEL[level]}`, preid)!,
+      preVersion: pkgJson.version,
+    };
+  }
+  const bumpFromPre = semver.inc(preVersion, `pre${BUMP_LEVEL[level]}`, preid)!;
+  const bumpFromCurrent = semver.inc(pkgJson.version, 'prerelease', preid)!;
+  if (semver.gt(bumpFromPre, bumpFromCurrent)) {
+    return { version: bumpFromPre, preVersion };
+  }
+  return { version: bumpFromCurrent, preVersion };
 }

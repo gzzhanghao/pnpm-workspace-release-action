@@ -4,11 +4,15 @@ import { FileData } from 'code-suggester/build/src/types';
 import { GITHUB_ORIGIN } from './constants';
 
 export interface ContextOptions {
+  octokit: Octokit;
   cwd: string;
+
   repo: RepoInfo;
   branch: string;
   sha: string;
-  octokit: Octokit;
+
+  preid?: string;
+  latest?: boolean;
 }
 
 export interface RepoInfo {

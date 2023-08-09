@@ -31798,7 +31798,7 @@ async function getReleaseInfo(ctx) {
         hash: commit.sha,
     }));
     const bumpInfo = recommendedBumpOpts.whatBump(conventionalCommits);
-    const version = semver.inc(pkgJson.version, BUMP_LEVEL[bumpInfo.level]);
+    const { version, preVersion } = getNextVersion(pkgJson, bumpInfo.level, ctx.options.preid);
     const changelog = parseArray(conventionalCommits, {
         version,
         host: GITHUB_ORIGIN,
@@ -31815,7 +31815,28 @@ async function getReleaseInfo(ctx) {
     return {
         version,
         changelog,
+        preVersion,
     };
+}
+function getNextVersion(pkgJson, level, preid) {
+    if (!preid) {
+        return {
+            version: semver.inc(pkgJson.version, BUMP_LEVEL[level]),
+        };
+    }
+    const preVersion = pkgJson.autorelease?.preVersion;
+    if (!preVersion || !semver.parse(pkgJson.version)?.prerelease.length) {
+        return {
+            version: semver.inc(pkgJson.version, `pre${BUMP_LEVEL[level]}`, preid),
+            preVersion: pkgJson.version,
+        };
+    }
+    const bumpFromPre = semver.inc(preVersion, `pre${BUMP_LEVEL[level]}`, preid);
+    const bumpFromCurrent = semver.inc(pkgJson.version, 'prerelease', preid);
+    if (semver.gt(bumpFromPre, bumpFromCurrent)) {
+        return { version: bumpFromPre, preVersion };
+    }
+    return { version: bumpFromCurrent, preVersion };
 }
 
 ;// CONCATENATED MODULE: ./src/update-changelog.ts
@@ -31881,6 +31902,12 @@ async function updatePackages(ctx, release) {
         ];
         for (const deps of depsList) {
             stabilizeWorkspaceVersion(deps);
+        }
+        if (release.preVersion) {
+            if (!pkgJson.autorelease) {
+                pkgJson.autorelease = {};
+            }
+            pkgJson.autorelease.preVersion = release.preVersion;
         }
         await ctx.writeFile(external_path_default().relative(ctx.cwd, pkgPath), `${JSON.stringify(pkgJson, null, 2)}\n`);
     };
@@ -31990,7 +32017,8 @@ async function createRelease(ctx) {
         await ensureTag(ctx, pull, version);
         create_release_logger.info(`Createing GitHub release 'v${version}'`);
         await ensureRelease(ctx, pull, version);
-        core.setOutput('release', JSON.stringify({ version }));
+        core.setOutput('release_created', true);
+        core.setOutput('tag_name', 'latest');
     }
     catch (error) {
         create_release_logger.fail(error);
@@ -32062,6 +32090,7 @@ class Context {
 }
 
 ;// CONCATENATED MODULE: ./src/index.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 
 
@@ -32077,12 +32106,12 @@ async function main() {
     }
     const branch = payload.ref.slice('refs/heads/'.length);
     const ctx = new Context({
+        octokit: github.getOctokit(core.getInput('token')).rest,
         cwd: process.cwd(),
         repo: github.context.repo,
         branch,
         sha: payload.after,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        octokit: github.getOctokit(core.getInput('token')).rest,
+        preid: core.getInput('preid'),
     });
     await Promise.all([createRelease(ctx), createPr(ctx)]);
 }

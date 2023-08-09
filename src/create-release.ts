@@ -40,7 +40,8 @@ export async function createRelease(ctx: Context) {
     logger.info(`Createing GitHub release 'v${version}'`);
     await ensureRelease(ctx, pull, version);
 
-    core.setOutput('release', JSON.stringify({ version }));
+    core.setOutput('release_created', true);
+    core.setOutput('tag_name', 'latest');
   } catch (error) {
     logger.fail(error);
     throw error;
@@ -84,6 +85,7 @@ async function ensureRelease(ctx: Context, pull: PullRequest, version: string) {
     ...ctx.repo,
     tag_name: `v${version}`,
     body: pull.body || undefined,
+    make_latest: ctx.options.latest ? 'true' : 'false',
   });
 
   logger.succ(`GitHub release v${version} created`);
