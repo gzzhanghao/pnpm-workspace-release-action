@@ -41,7 +41,7 @@ export class Context {
     };
   }
 
-  async writeFile(filename: string, content: string) {
+  writeFile(filename: string, content: string) {
     this.changes.set(filename, { mode: '100644', content });
   }
 }

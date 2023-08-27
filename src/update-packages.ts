@@ -3,6 +3,7 @@ import path from 'path';
 
 import { PackageInfo, getPackages } from './get-packages';
 import { ReleaseInfo } from './get-release-info';
+import { exec } from './shared/child-process';
 import { Context } from './shared/context';
 
 export async function updatePackages(ctx: Context, release: ReleaseInfo) {
@@ -40,11 +41,19 @@ export async function updatePackages(ctx: Context, release: ReleaseInfo) {
         : undefined;
     }
 
-    await ctx.writeFile(
-      path.relative(ctx.cwd, pkgPath),
-      `${JSON.stringify(pkgJson, null, 2)}\n`,
-    );
+    const newContent = `${JSON.stringify(pkgJson, null, 2)}\n`;
+
+    ctx.writeFile(path.relative(ctx.cwd, pkgPath), newContent);
+
+    await fs.promises.writeFile(pkgPath, newContent);
   };
 
   await Promise.all(packages.map(async (pkg) => updatePackageJson(pkg)));
+
+  await exec('pnpm i --lockfile-only');
+
+  ctx.writeFile(
+    'pnpm-lock.yaml',
+    await fs.promises.readFile(path.join(ctx.cwd, 'pnpm-lock.yaml'), 'utf-8'),
+  );
 }

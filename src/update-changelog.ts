@@ -8,7 +8,7 @@ const CHANGELOG_PATH = 'CHANGELOG.md';
 
 export async function updateChangelog(ctx: Context, release: ReleaseInfo) {
   const originChangelog = await safeRead(path.join(ctx.cwd, CHANGELOG_PATH));
-  await ctx.writeFile(
+  ctx.writeFile(
     CHANGELOG_PATH,
     `${`${release.changelog}\n\n${originChangelog}`.trim()}\n`,
   );

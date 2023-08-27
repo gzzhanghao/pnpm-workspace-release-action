@@ -31869,7 +31869,7 @@ async function getReleaseInfo(ctx) {
 const CHANGELOG_PATH = 'CHANGELOG.md';
 async function updateChangelog(ctx, release) {
     const originChangelog = await safeRead(external_path_default().join(ctx.cwd, CHANGELOG_PATH));
-    await ctx.writeFile(CHANGELOG_PATH, `${`${release.changelog}\n\n${originChangelog}`.trim()}\n`);
+    ctx.writeFile(CHANGELOG_PATH, `${`${release.changelog}\n\n${originChangelog}`.trim()}\n`);
 }
 function safeRead(changelogPath) {
     if (!external_fs_default().existsSync(changelogPath)) {
@@ -31898,6 +31898,7 @@ async function getPackages(ctx) {
 }
 
 ;// CONCATENATED MODULE: ./src/update-packages.ts
+
 
 
 
@@ -31932,9 +31933,13 @@ async function updatePackages(ctx, release) {
                 ? { preVersion: release.preVersion }
                 : undefined;
         }
-        await ctx.writeFile(external_path_default().relative(ctx.cwd, pkgPath), `${JSON.stringify(pkgJson, null, 2)}\n`);
+        const newContent = `${JSON.stringify(pkgJson, null, 2)}\n`;
+        ctx.writeFile(external_path_default().relative(ctx.cwd, pkgPath), newContent);
+        await external_fs_default().promises.writeFile(pkgPath, newContent);
     };
     await Promise.all(packages.map(async (pkg) => updatePackageJson(pkg)));
+    await exec('pnpm i --lockfile-only');
+    ctx.writeFile('pnpm-lock.yaml', await external_fs_default().promises.readFile(external_path_default().join(ctx.cwd, 'pnpm-lock.yaml'), 'utf-8'));
 }
 
 ;// CONCATENATED MODULE: ./src/create-pr.ts
@@ -32099,7 +32104,7 @@ class Context {
             pull: `${GITHUB_ORIGIN}/${this.repo.owner}/${this.repo.repo}/pull`,
         };
     }
-    async writeFile(filename, content) {
+    writeFile(filename, content) {
         this.changes.set(filename, { mode: '100644', content });
     }
 }
