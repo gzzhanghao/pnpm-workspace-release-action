@@ -63,7 +63,7 @@ export async function getReleaseInfo(
     return !semver.prerelease(version!);
   });
 
-  if (lastReleaseIndex) {
+  if (lastReleaseIndex < 0) {
     logger.info('Latest release commit not found');
   } else {
     const commit = commits[lastReleaseIndex];
