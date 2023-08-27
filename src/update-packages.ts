@@ -56,4 +56,6 @@ export async function updatePackages(ctx: Context, release: ReleaseInfo) {
     'pnpm-lock.yaml',
     await fs.promises.readFile(path.join(ctx.cwd, 'pnpm-lock.yaml'), 'utf-8'),
   );
+
+  await exec('git checkout .');
 }

@@ -31940,6 +31940,7 @@ async function updatePackages(ctx, release) {
     await Promise.all(packages.map(async (pkg) => updatePackageJson(pkg)));
     await exec('pnpm i --lockfile-only');
     ctx.writeFile('pnpm-lock.yaml', await external_fs_default().promises.readFile(external_path_default().join(ctx.cwd, 'pnpm-lock.yaml'), 'utf-8'));
+    await exec('git checkout .');
 }
 
 ;// CONCATENATED MODULE: ./src/create-pr.ts
