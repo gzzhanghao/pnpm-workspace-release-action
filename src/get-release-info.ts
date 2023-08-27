@@ -99,9 +99,14 @@ export async function getReleaseInfo(
 
   const bumpInfo: BumpInfo = recommendedBumpOpts.whatBump(conventionalCommits);
 
+  let bumpLevel = bumpInfo.level;
+  if (semver.lt(pkgJson.version, '1.0.0')) {
+    bumpLevel = Math.min(bumpLevel + 1, BUMP_LEVEL.length - 1);
+  }
+
   const { version, preVersion } = getNextVersion(
     pkgJson.version,
-    BUMP_LEVEL[bumpInfo.level],
+    BUMP_LEVEL[bumpLevel],
     pkgJson.autorelease?.preVersion,
     ctx.options.preid,
   );
