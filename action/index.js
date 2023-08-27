@@ -31728,7 +31728,7 @@ var conventional_commits_parser_default = /*#__PURE__*/__nccwpck_require__.n(con
 var semver = __nccwpck_require__(8884);
 ;// CONCATENATED MODULE: ./src/shared/constants.ts
 const GITHUB_ORIGIN = 'https://github.com';
-const RELEASE_TITLE_REGEX = /^chore: release v(?<version>.+)$/;
+const RELEASE_TITLE_REGEX = /^chore: release v(?<version>[^ ]+)/;
 
 // EXTERNAL MODULE: ./node_modules/.pnpm/chalk@4.1.2/node_modules/chalk/source/index.js
 var source = __nccwpck_require__(9348);
